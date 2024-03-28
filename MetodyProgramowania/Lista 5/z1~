@@ -1,0 +1,16 @@
+#lang plait
+
+;( ' a 'b - > 'a)
+(define (f1 a b) a)
+
+;(( ' a 'b - > 'c) ( ' a -> 'b) 'a -> 'c)
+(define (f2 f2a f2b a) (f2a a (f2b a)))
+
+;((( ' a - > 'a) -> 'a) -> 'a)
+(define (f3 [f : (('a -> 'a) -> 'a)]) (f (lambda (x) x))) 
+
+;(( ' a - > 'b) (' a -> 'c) -> ( 'a -> ( ' b * 'c)))
+(define (f4 f4a f4b) (lambda (x) (pair (f4a x) (f4b x))))
+
+;(( ' a - > ( Optionof ( 'a * 'b))) 'a -> ( Listof 'b))
+(define (f5 [f : ('a -> (Optionof ('a * 'b)))] a) (list (snd (some-v (f a)))))

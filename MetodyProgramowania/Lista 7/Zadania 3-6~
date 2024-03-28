@@ -1,0 +1,35 @@
+#lang racket
+
+;; contract definition
+(define/contract (suffixes lst)
+  (-> list? list?)
+  ;; procedure definition
+  (let loop ((lst lst) (acc '()))
+    (cond
+      ((null? lst) acc)
+      (else (loop (cdr lst) (cons lst acc))))))
+
+(define/contract (f1 a b)
+  (parametric->/c [a b] (-> a b a))
+  a)
+
+(define/contract (f2 f2a f2b a)
+  (parametric->/c [a b c] (-> (-> a b c) (-> a b) a c))
+  (f2a a (f2b a)))
+
+(define/contract (f3 f3a f3b)
+  (parametric->/c [a b c] (-> (-> b c) (-> a b) (-> a c)))
+  (lambda (x) (f3a (f3b x))))
+
+(define/contract (foldl-map f a xs)
+  (parametric->/c [a b] ((a b . -> . (cons/c b b)) b (listof a) . -> . (cons/c (listof b) b)))
+  (define (it a xs ys)
+    (if (null? xs)
+        (cons (reverse ys) a)
+        (let [(p (f (car xs) a))]
+          (it (cdr p)
+              (cdr xs)
+              (cons (car p) ys)))))
+  (it a xs null))
+
+(foldl-map (lambda (x a) ( cons a (+ a x))) 0 '(1 2 3))

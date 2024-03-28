@@ -1,0 +1,26 @@
+#lang racket
+
+(define (my-foldl f x xs)
+  (define (it xs acc)
+    (if (null? xs)
+        acc
+        (it (cdr xs) (f (car xs) acc))))
+  (it xs x))
+
+(define (my-foldr f x xs)
+  (if (null? xs)
+      x
+      (f (car xs) (my-foldr f x (cdr xs)))))
+
+(define (foldl-reverse xs)
+  (foldl (lambda (y ys) (cons y ys)) null xs))
+
+( define ( foldr-reverse2 xs )
+   ( foldr ( lambda (y ys ) ( append ys ( list y))) null xs ))
+
+( length ( foldr-reverse2 ( build-list 10000 identity )))
+( length ( foldl-reverse ( build-list 10000 identity )))
+( foldl-reverse ( build-list 10000 identity ))
+(append (list 1 2) 5)
+
+(( lambda (y ys ) ( append ys ( list y))) 3 '(4))

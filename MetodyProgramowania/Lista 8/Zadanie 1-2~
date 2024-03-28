@@ -1,0 +1,26 @@
+#lang racket
+
+(define (last-pair xs)
+  (if (null? (mcdr xs))
+      xs
+      (last-pair (mcdr xs))))
+  
+(define (cycle! xs)
+  (set-mcdr! (last-pair xs) xs))
+  
+(define (mreverse! lst)
+  (define (reverse-helper prev current)
+    (if (null? current)
+        (void)
+        (let ([next (mcdr current)])
+          (set-mcdr! current prev)
+          (reverse-helper current next))))
+  (reverse-helper '() lst))
+
+(define example-mlist (mcons 1 (mcons 2 (mcons 3 '()))))
+example-mlist
+(define end (last-pair example-mlist))
+(mreverse! example-mlist)
+end
+(cycle! end)
+end

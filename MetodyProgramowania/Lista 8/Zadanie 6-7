@@ -1,0 +1,63 @@
+#lang plait
+
+(define-type RacketExpression
+  (r-variable [var : Symbol])
+  (r-number [num : Number])
+  (r-lambda [arg : (Listof Symbol)] [exp : RacketExpression])
+  (r-apply [func : RacketExpression] [arg : (Listof RacketExpression)])
+  (r-let [def : (Listof (Symbol * RacketExpression))] [func : RacketExpression])
+  (r-if [cond : RacketExpression] [true : RacketExpression] [false : RacketExpression])
+  (r-cond [assign : (Listof (RacketExpression * RacketExpression))]))
+
+(define (parse-list-lambda s)
+  (local [(define (helper xs)
+            (if (empty? xs)
+                '()
+                (cons (s-exp->symbol (first xs)) (helper (rest xs)))))]
+    (helper (s-exp->list s))))
+
+(define (parse-list-apply s)
+  (if (empty? s)
+      '()
+      (cons (parse-RacketExpression (first s)) (parse-list-apply (rest s)))))
+
+(define (parse-list-let s)
+  (local [(define (helper xs)
+            (if (empty? xs)
+                '()
+                (let ([fs (s-exp->list (first xs))])
+                  (cons (pair (s-exp->symbol (first fs)) (parse-RacketExpression (second fs))) (helper (rest xs))))))]
+    (helper (s-exp->list s))))
+
+(define (parse-list-cond s)
+  (if (empty? s)
+      '()
+      (let ([fs (s-exp->list (first s))])
+        (cons (pair (parse-RacketExpression (first fs)) (parse-RacketExpression (second fs))) (parse-list-cond (rest s))))))
+
+(define (parse-RacketExpression s)
+  (cond
+    [(s-exp-symbol? s) (r-variable (s-exp->symbol s))]
+    [(s-exp-number? s) (r-number (s-exp->number s))]
+    [(s-exp-list? s)
+     (let* ([xs (s-exp->list s)] [fst (first xs)])
+       (cond
+         [(equal? fst `lambda) (r-lambda (parse-list-lambda (second xs))
+                                         (parse-RacketExpression (third xs)))]
+         [(equal? fst `let) (r-let (parse-list-let (second xs))
+                                   (parse-RacketExpression (third xs)))]
+         [(equal? fst `if) (r-if (parse-RacketExpression (second xs))
+                                 (parse-RacketExpression (third xs))
+                                 (parse-RacketExpression (fourth xs)))]
+         [(equal? fst `cond) (r-cond (parse-list-cond (rest xs)))]
+         [else (r-apply (parse-RacketExpression (first xs)) (parse-list-apply (rest xs)))]))]))
+
+(parse-RacketExpression `s)
+(parse-RacketExpression `5)
+(parse-RacketExpression `(lambda (a b c d e) 5))
+(parse-RacketExpression `(plus 6 5 5))
+(parse-RacketExpression `(let ([s 4] [b 6]) 5))
+(parse-RacketExpression `(if s 5 6))
+(parse-RacketExpression `(cond [s 6] [b 8] [k 9] [else 6]))
+
+

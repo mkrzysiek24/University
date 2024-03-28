@@ -1,0 +1,101 @@
+#lang racket
+
+ (require racket/date)
+
+(define (suffixes-no-contract xs)
+    (cond [(null? xs) (list empty)]
+          [else 
+            (cons xs (suffixes-no-contract (rest xs)))
+          ]
+    )
+)
+
+(define/contract (suffixes lista)
+    (parametric->/c [a] (-> (listof a) (listof (listof a))))
+    (cond [(null? lista) (list empty)]
+          [else 
+            (cons lista (suffixes (rest lista)))
+          ]
+    )
+)
+
+(time (suffixes-no-contract (build-list 3000 values)) (void))
+(time (suffixes (build-list 3000 values)) (void))
+
+(define/contract (f1 a b)
+  (parametric->/c [a b] (-> a b a))
+  a)
+
+(define/contract (f2 f2a f2b a)
+  (parametric->/c [a b c] (-> (-> a b c) (-> a b) a c))
+  (f2a a (f2b a)))
+
+(define/contract (f3 f3a f3b)
+  (parametric->/c [a b c] (-> (-> b c) (-> a b) (-> a c)))
+  (lambda (x) (f3a (f3b x))))
+
+(define/contract (f4 f)
+  (parametric->/c [a] (-> (-> (-> a a) a) a))
+  (f (lambda x x)))
+
+(define/contract (foldl-map f a xs)
+  (parametric->/c [elem acc] (-> (-> elem acc (cons/c elem acc)) acc (listof elem) (cons/c (listof elem) acc)))
+  ;(parametric->/c [a b] (-> (-> a b (cons/c a b)) b (listof a) (cons/c (listof a) b)))
+  (define (it a xs ys)
+    (if (null? xs)
+        (cons (reverse ys) a)
+        (let [(p (f (car xs) a))]
+          (it (cdr p)
+              (cdr xs)
+              (cons (car p) ys)))))
+  (it a xs null))
+
+
+;Zadanie 6
+
+;Bledny foldr
+(define/contract (fold-right2 f acc xs)
+  ( parametric->/c [a] (-> (-> a a a) a ( listof a) a))
+  (if (empty? xs)
+      acc
+      (f (first xs) (fold-right2 f (first xs) (rest xs)) )
+      )
+)
+
+;Poprawny foldr
+(define/contract (my-foldr f x xs)
+  (parametric->/c [a] (-> (-> a a a) a ( listof a) a))
+  (if (empty? xs)
+      x
+      (f (first xs) (my-foldr f x (rest xs)))))
+
+; niepoprawna definicja
+(define/contract (fold-right f acc xs)
+  ;( parametric->/c [a b] (-> (-> a b b) b ( listof a) b))
+  ( parametric->/c [a] (-> (-> a a a) a ( listof a) a))
+  (if (empty? xs)
+      acc
+      (f (first xs) (fold-right f (first xs) (rest xs)) )
+      )
+)
+
+; niepoprawne działanie np. dla (fold-right max 100 '( 23 71 31 -3 0 12))
+; funkcja nie weźmie pod uwagę wartości podanej na początku do akumulatora
+
+
+;(( ' a 'a - > 'a) 'a ( Listof 'a) -> 'a)
+;zmiana typu powoduje błąd, ponieważ funkcja f musiałaby być, która bierze 'a i 'a oraz zwraca 'a, ograniczamy się tylko do tego typu
+
+; tak, zmieniona wersja kontraktu ogranicza użytowanie procedury, ponieważ nie możemy użyć funkcji, które zmieniają typ elementów
+
+(fold-right max 0 '( 1 2 3 4 5))
+
+(my-foldr max 0 '( 1 2 3 4 5))
+
+(fold-right + 1 '(1 2 3 4))
+
+(my-foldr + 1 '(1 2 3 4))
+
+( foldl-map ( lambda (x a) ( cons a (+ a x))) 0 '(1 2 3) )
+
+(fold-right max 100 '( 23 71 31 -3 0 12))

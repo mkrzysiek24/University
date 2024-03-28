@@ -1,0 +1,33 @@
+#lang racket
+
+(define-struct matrix (a b c d))
+
+
+(define (matrix-mult m n)
+  (matrix
+   (+ (* (matrix-a m) (matrix-a n)) (* (matrix-b m) (matrix-c n)))
+   (+ (* (matrix-a m) (matrix-b n)) (* (matrix-b m) (matrix-d n)))
+   (+ (* (matrix-c m) (matrix-a n)) (* (matrix-d m) (matrix-c n)))
+   (+ (* (matrix-c m) (matrix-b n)) (* (matrix-d m) (matrix-d n)))))
+
+(define matrix-id
+  (matrix 1 0 0 1))
+
+(define (matrix-expt m k)
+  (if (= k 1) m
+      (matrix-mult m (matrix-expt m (- k 1)))))
+
+(define (fib-matrix k)
+  (define m (matrix 1 1 1 0))
+    (matrix-b (matrix-expt m k)))
+
+(define x (matrix 1 3 2 0))
+(define y (matrix 3 -1 7 4))
+(matrix-a (matrix-expt x 2))
+(matrix-b (matrix-expt x 2))
+(matrix-c (matrix-expt x 2))
+(matrix-d (matrix-expt x 2))
+
+(matrix-expt x 2)
+
+(fib-matrix 13)

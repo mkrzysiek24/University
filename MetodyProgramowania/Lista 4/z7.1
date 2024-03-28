@@ -1,0 +1,37 @@
+#lang racket
+(define empty-queue ; pusta kolejka
+  (cons '() '()))
+
+(define (empty? q) ; czy kolejka jest pusta?
+  (null? (car q)))
+
+(define (push-back x q) ; dodaj element na koniec kolejki
+  (cond ((empty? q) (cons (list x) '()))
+        ((equal? '() (cdr q)) (cons (car q) (cons (list x) '())))
+        (else (cons (car q) (cons (cons x (cadr q)) '())))))
+
+(define (front q) ; podejrzyj element na poczatku kolejki
+  (if (empty? q)
+      (error "Kolejka pusta")
+      (caar q)))
+
+(define (pop q) ; zdejmij element z przodu kolejki
+  (cond ((empty? q) (error "Pusta"))
+        ((equal? '() (cdr q)) empty-queue)
+        (else (list (list (caadr q)) (cdadr q)))))
+
+
+
+empty-queue
+(car empty-queue)
+(empty? empty-queue)
+(define f (push-back 1 empty-queue))
+f
+(define q (push-back 6 f))
+q
+(define z (push-back 4 q))
+z
+(define k (push-back 9 z))
+k
+(front k)
+(pop f)

@@ -1,0 +1,59 @@
+#lang plait
+;zad 6
+
+
+(define-type (RoseTree 'a)
+  (leaf [elem : 'a])
+  (node [child : (Listof (RoseTree 'a))]))
+
+(define test
+  (node (list
+         (node (list
+                (leaf 1)
+                (node (list
+                       (leaf 1)
+                       (leaf 2)
+                       (leaf 3)
+                       (leaf 4)))
+                (leaf 3)
+                (leaf 4)))
+         (node (list
+                (leaf 5)
+                (leaf 6)
+                (leaf 7))))))
+(define test2
+  (node (list
+         (leaf 1)
+         (leaf 2)
+         (leaf 3)
+         (leaf 4))))
+
+
+;(define (InOrderRoseTree tree)
+;(local [(define (for-loop list_of_trees acc)
+;			( if (empty? list_of_trees)
+;				acc
+;				(for-loop (rest list_of_trees)
+;						(append acc
+;								(InOrderRoseTree (first list_of_trees))))))]
+;
+;(cond [(empty? (node-child tree)) (list (node-elem tree))]
+;		[else (append (InOrderRoseTree (first (node-child tree)))
+;					(append (list(node-elem tree))
+;							(for-loop (rest (node-child tree)) '() )))])))
+
+;(define (InOrderRoseTreev2 tree xs)
+;  (cond [(leaf? tree) (cons (leaf-elem tree) xs)]
+;        [else (InOrderRoseTreev2 (first (node-child tree))
+;                                 (foldr (lambda (x xs) (InOrderRoseTreev2 x xs))
+;                                        xs
+;                                        (rest (node-child tree))))]))
+
+
+(define (InOrderRoseTreev2 tree xs)
+  (cond [(leaf? tree) (cons (leaf-elem tree) xs)]
+        [(empty? (node-child tree)) xs]
+        [else (foldr (lambda (x xs) (InOrderRoseTreev2 x xs))
+                     xs
+                     (node-child tree))]))
+(InOrderRoseTreev2 test '())

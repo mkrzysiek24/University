@@ -1,0 +1,54 @@
+#lang plait
+
+(define-syntax my-and
+  (syntax-rules ()
+    [(my-and) #t]
+    [(my-and expr) expr]
+    [(my-and expr1 expr2 ...)
+     (if expr1 (my-and expr2 ...) #f)]))
+
+(define-syntax my-or
+  (syntax-rules ()
+    [(my-or) #f]
+    [(my-or expr) expr]
+    [(my-or expr1 expr2 ...)
+       (if expr1 expr1 (my-or expr2 ...))]))
+
+(define-syntax my-let
+  (syntax-rules ()
+    [(my-let ([var expr]) body)
+     ((λ (var) body) expr)]
+    [(my-let ([var1 expr1] [var2 expr2] ...) body)
+     ((λ (var1 var2 ...) body) expr1 expr2 ...)]))
+
+(define-syntax my-let*
+  (syntax-rules ()
+    [(my-let* () body)
+     body]
+    [(my-let* ([var1 expr1] [var2 expr2] ...) body)
+     ((λ (var1) (my-let* ([var2 expr2] ...) body)) expr1)]))
+
+(define-syntax my-let2*
+  (syntax-rules ()
+    [(my-let* () body)
+     body]
+    [(my-let* ([var expr] rest ...) body)
+     (my-let ([var expr]) (my-let* (rest ...) body))]))
+
+
+(my-and) ; Wynik: #t
+
+(my-and #t #t) ; Wynik: #t
+
+(my-and #t #f) ; Wynik: #f
+
+(my-or) ; Wynik: #f
+
+(my-or #f #f) ; Wynik: #f
+
+(my-or #f #t) ; Wynik: #t
+
+(my-let ([x 5] [y 10] [z 15]) (+ x (+ y z))) ; Wynik: 15
+
+(my-let* ([x 5])
+  (+ x 5)) ; Wynik: 20

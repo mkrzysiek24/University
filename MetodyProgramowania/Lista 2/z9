@@ -1,0 +1,20 @@
+#lang racket
+(define l (cons 1 (list 2 3 -103 6  1 8 9 10 12)))
+
+(define (select xs)
+  (define (it xs min ys)
+    (cond ((null? xs) (cons min ys))
+          ((= (car xs) min) (it (cdr xs) (car xs) (cons (car xs) ys)))
+          ((< (car xs) min) (it (cdr xs) (car xs) (cons min ys)))
+          (else (it (cdr xs) min (cons (car xs) ys)))))
+  (it (cdr xs) (car xs) '()))
+
+(define (select-sort xs)
+  (if (null? xs)
+      '()
+      (let ([x (select xs)])
+        (cons (car x) (select-sort (cdr x))))))
+
+(select l)
+
+(select-sort l)

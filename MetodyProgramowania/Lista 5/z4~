@@ -1,0 +1,19 @@
+#lang plait
+
+(define (perms lst)
+  (cond
+    ((empty? lst) '(()))
+    ((empty? (rest lst)) (list lst))
+    (else (flatten (map (lambda (x)
+                          (map (lambda (p) (cons x p))
+                               (perms (remove x lst))))
+                        lst)))))
+
+
+(define (remove item lst)
+  (filter (lambda (x) (not (eq? x item))) lst))
+
+(define (flatten lst)
+  (foldr append '() lst))
+
+(perms '(1 2 3))

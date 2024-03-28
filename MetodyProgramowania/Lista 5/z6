@@ -1,0 +1,53 @@
+#lang plait
+
+
+(define-type (RoseTree 'a)
+  (node [elem : 'a] [subtrees : (Listof (RoseTree 'a))]))
+
+
+(define (my-append xs ys)
+  (foldr cons ys xs))
+
+
+(define (dfs tree)
+  (cond [(leaf? tree) (list (node-elem tree))]
+        [else (cons (node-elem tree)
+                    (my-append-map dfs (node-subtrees tree)))]))
+
+
+(define (my-append-map f xs)
+  (foldr (lambda (x acc) (my-append (f x) acc)) '() xs))
+
+
+
+(define (leaf? tree)
+  (empty? (node-subtrees tree)))
+
+(define example-tree
+  (node 1
+        (list
+         (node 2 (list
+                  (node 3 (list)))
+               )
+         (node 4 (list))
+         (node 5 (list
+                  (node 6 (list))
+                  (node 7 ( list (node 8 (list))))
+                  (node 9 (list)))
+               )
+         (node 10 (list))
+         )
+        ))
+
+(define test
+  (node 2
+        (list (node 3 (list))
+              (node 5 (list
+                       (node 7 (list))
+                       (node 8 (list))
+                       (node 9 (list))))
+              (node 10 (list)))))
+
+
+(dfs example-tree)
+(dfs test)

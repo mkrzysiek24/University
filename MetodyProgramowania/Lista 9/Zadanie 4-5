@@ -1,0 +1,82 @@
+#lang racket
+ 
+(define morse-code-table
+  '((#\a . ".-") (#\b . "-...") (#\c . "-.-.") (#\d . "-..") (#\e . ".")
+    (#\f . "..-.") (#\g . "--.") (#\h . "....") (#\i . "..") (#\j . ".---")
+    (#\k . "-.-") (#\l . ".-..") (#\m . "--") (#\n . "-.") (#\o . "---")
+    (#\p . ".--.") (#\q . "--.-") (#\r . ".-.") (#\s . "...") (#\t . "-")
+    (#\u . "..-") (#\v . "...-") (#\w . ".--") (#\x . "-..-") (#\y . "-.--")
+    (#\z . "--..") (#\1 . ".----") (#\2 . "..---") (#\3 . "...--") (#\4 . "....-")
+    (#\5 . ".....") (#\6 . "-....") (#\7 . "--...") (#\8 . "---..") (#\9 . "----.")
+    (#\0 . "-----") (#\, . "--..--") (#\! . "-.-.--") (#\? . "..--..") (#\s . "/")
+    (#\= . "-...-") (#\+ . ".-.-.") (#\- . "-....-") (#\* . "-..-") (#\/ . "-..-.") 
+    (#\@ . ".--.-.") (#\$ . "...-..-") (#\" . ".-..-.") (#\' . ".----.") 
+    (#\^ . ".-..-.")
+    (#\& . ".-...") (#\% . "..-.") (#\# . "...-.-")))
+ 
+(define (get-letter l)
+    (define (helper l tab)
+        (if (null? tab) (error "Not found")
+            (if (equal? (car (car tab)) l)
+                (cdr (car tab))
+                (helper l (rest tab))
+            )
+        )
+    )
+    (helper l morse-code-table)
+)
+ 
+ 
+(define (morse-code str)
+    (define strlst (string->list (string-downcase str)))
+    (define (helper lst)
+        (cond [(null? lst) ""]
+              [(equal? (car lst) #\space)
+                (if (equal? (car (rest lst)) #\space)
+                    (helper (rest lst))
+                    (string-append "  " (helper (rest lst)))
+                )
+              ]
+              [else
+                (if (null? (rest lst))
+                    (string-append (get-letter (car lst)) (helper (rest lst)))
+                    (string-append (string-append (get-letter (car lst)) " ") (helper (rest lst)))
+                )
+ 
+              ]
+        )
+    )
+    (helper strlst)
+)
+ 
+(define (get-char str)
+    (define (helper l tab)
+        (if (null? tab) ""
+            (if (equal? (cdr (car tab)) l)
+                (car (car tab))
+                (helper l (rest tab))
+            )
+        )
+    )
+    (helper str morse-code-table)
+)
+ 
+
+
+(define (morse-decode stri)
+  (define (morse-decode-helper str acc)
+    (if (null? str)
+        (string (get-char acc))
+        (if (equal? #\space  (car str))
+            (if (equal? #\space  (car (cdr str)))
+                (string-append (string-append (string (get-char acc)) " ") (morse-decode-helper (rest (rest str)) ""))
+                (string-append (string (get-char acc)) (morse-decode-helper (rest str) ""))
+                )
+            (morse-decode-helper (rest str) (string-append acc (string (car str))))
+            )
+        )
+    )
+  (morse-decode-helper (string->list stri) "")
+  )
+ 
+(morse-decode "-- .--.  ..--- ----- ..--- ..---")

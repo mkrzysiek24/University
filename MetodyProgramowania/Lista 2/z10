@@ -1,0 +1,26 @@
+#lang racket
+
+(define (split xs)
+  (let it ([xs xs] [l1 '()] [l2 '()])
+    (cond ((null? xs) (list l1 l2))
+          ((null? (cdr xs)) (list (cons (car xs) l1) l2))
+          (else (it (cddr xs) (cons (car xs) l1) (cons (cadr xs) l2))))))
+
+(define (merge xs ys)
+    (cond ((null? xs) ys)
+          ((null? ys) xs)
+          ((< (car ys) (car xs)) (cons (car ys) (merge xs (cdr ys))))
+          (else (cons (car xs) (merge (cdr xs) ys)))))
+
+(define (merge-sort xs)
+  (cond ((< (length xs) 2) xs) 
+        (else (merge (merge-sort (car (split xs))) (merge-sort (cadr (split xs)))))))
+
+(define l (list 1 2 3 4 5 6 7))
+(split l)
+(cadr (split l))
+(merge l (list 1 2 5 4 5))
+
+(define k (list 6 2 4 9 7 1 0))
+
+(merge-sort k)

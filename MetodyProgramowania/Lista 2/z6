@@ -1,0 +1,12 @@
+#lang racket
+(define l (list 1 2 3 4))
+
+(define (maximum xs)
+  (if (null? xs) -inf.0
+      (let([maxi (maximum (cdr xs))])
+      (if (> (car xs) maxi) (car xs)
+          maxi))))
+
+(maximum l)
+
+(maximum (list))

@@ -1,0 +1,70 @@
+#lang plait
+
+( define-type Prop
+   ( var [ v : String ])
+   ( conj [ l : Prop ] [r : Prop ])
+   ( disj [ l : Prop ] [r : Prop ])
+   ( neg [ f : Prop ]) )
+
+
+(define env (hash (list (pair "p" #f) (pair "q" #t) (pair "r" #f))))
+
+(define my-prop
+  (conj (var "p") (disj (var "q") (neg (var "r")))))
+
+(define my-prop-taut
+  (neg (conj (var "p") (neg (var "p")))))
+
+(define (remove-duplicates lst)
+  (cond
+    [(empty? lst) empty]
+    [(member (first lst) (rest lst)) (remove-duplicates (rest lst))]
+    [else (cons (first lst) (remove-duplicates (rest lst)))]))
+
+(define (free-vars prop)
+  (cond
+    ((var? prop) (list (var-v prop)))
+    ((neg? prop) (free-vars (neg-f prop)))
+    ((conj? prop) (remove-duplicates (append (free-vars (conj-l prop)) (free-vars (conj-r prop)))))
+    ((disj? prop) (remove-duplicates (append (free-vars (disj-l prop)) (free-vars (disj-r prop)))))))
+
+(define (eval env prop)
+  (cond
+    [(var? prop) (some-v (hash-ref env (var-v prop)))]
+    [(conj? prop) (and (eval env (conj-l prop)) (eval env (conj-r prop)))]
+    [(disj? prop) (or (eval env (disj-l prop)) (eval env (disj-r prop)))]
+    [(neg? prop) (not (eval env (neg-f prop)))]))
+
+(define (hashes lst)
+  (if (empty? lst)
+      (list empty)
+      (let ((rest-hashes (hashes (rest lst))))
+        (append (map (lambda (hash) (cons (pair (first lst) #f) hash))
+                      rest-hashes)
+                (map (lambda (hash) (cons (pair (first lst) #t) hash))
+                      rest-hashes)))))
+
+;(define (tautology? prop)
+;    (let loop ((hashes (hashes (free-vars prop))))
+;      (cond
+;        ((null? hashes) #t)
+;        ((eval (make-hash (first hashes) prop) 
+;         (loop (rest hashes)))
+;        (else #f))))
+
+(define (andlst lst)
+  (cond
+    ((empty? lst) #t)
+    ((first lst) (andlst (rest lst)))
+    (else #f)))
+
+(define (tautology? prop)
+  (let ((envs (hashes (free-vars prop))))
+    (andlst (map (lambda (env) (eval (make-hash env) prop)) envs))))
+
+
+
+(make-hash (list (pair "p" #f) (pair "q" #t) (pair "r" #f)))
+(hashes (free-vars my-prop))
+(tautology? my-prop)
+(tautology? my-prop-taut)

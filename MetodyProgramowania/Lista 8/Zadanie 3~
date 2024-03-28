@@ -1,0 +1,156 @@
+#lang racket
+
+(provide 
+    make-queue
+    pop-back
+    pop-front
+    push-back
+    push-front
+    pq
+    pq-back
+)
+
+(struct node 
+    ([prev #:mutable]
+     [elem #:mutable]
+     [next #:mutable]
+    )
+#:transparent)
+
+(struct queue 
+    ([head #:mutable]
+     [back #:mutable]
+    )
+#:transparent)
+
+; kolejka pusta
+; wstawianie na początek/koniec
+; usuwanie z końca/początku
+
+(define empty-queue (queue null null))
+
+(define (make-queue)
+  (queue null null))
+
+(define (is-empty q)
+    (null? (queue-head q))
+)
+
+(define (pq q)
+    (define (helper iter)
+    (if (null? iter)
+        (void)
+        (begin (display (node-elem iter))
+        (helper (node-next iter))
+        )
+    )
+    )
+    (helper (queue-head q))
+)
+
+(define (pq-back q)
+    (define (helper iter)
+    (if (null? iter)
+        (void)
+        (begin (display (node-elem iter))
+        (helper (node-prev iter))
+        )
+    )
+    )
+    (helper (queue-back q))
+)
+
+(define/contract (push-front q e)
+    (-> queue? any/c void?)
+    (define x (node null e null))
+    (define temp (queue-head q))
+    (begin
+        (if (is-empty q)
+            (begin
+             (set-queue-head! q x)
+             (set-queue-back! q x)
+            )
+            (if (null? (node-next (queue-head q)))
+                (begin
+                    (set-queue-head! q x)
+                    (set-node-next! x (queue-back q))
+                    (set-node-prev! (queue-back q) x)
+                )
+                (begin 
+                    (set-queue-head! q x)
+                    (set-node-next! x temp)
+                    (set-node-prev! temp x)
+                )))))
+
+(define (pop-front q)
+    (-> queue? void?)
+    (if (is-empty q)
+        (void)
+        (if (null? (node-next (queue-head q)))
+            (begin
+                (set-queue-head! q null)
+                (set-queue-back! q null)
+            )
+            (begin
+                (set-queue-head! q (node-next (queue-head q)))
+                (set-node-prev! (queue-head q) null)
+            ))))
+
+
+(define/contract (push-back q e)
+    (-> queue? any/c void?)
+    (define x (node null e null))
+    (define temp (queue-back q))
+    (begin
+        (if (is-empty q)
+            (begin
+             (set-queue-head! q x)
+             (set-queue-back! q x)
+            )
+            (if (null? (node-next (queue-head q)))
+                (begin
+                    (set-queue-back! q x)
+                    (set-node-prev! x (queue-head q))
+                    (set-node-next! (queue-head q) x)
+                )
+                (begin 
+                    (set-queue-back! q x)
+                    (set-node-prev! x temp)
+                    (set-node-next! temp x)
+                )))))
+
+
+(define (pop-back q)
+    (-> queue? void?)
+    (if (is-empty q)
+        (void)
+        (if (null? (node-next (queue-head q)))
+            (begin
+                (set-queue-head! q null)
+                (set-queue-back! q null)
+            )
+            (begin
+                (set-queue-back! q (node-prev (queue-back q)))
+                (set-node-next! (queue-back q) null)
+            ))))
+
+(define moja (queue null null))
+
+(push-back moja 1)
+(push-back moja 2)
+(push-back moja 3)
+(push-back moja 4)
+
+
+(pq moja)
+(queue-back moja)
+
+(pop-back moja)
+
+(display "\n")
+
+(pq moja)
+
+
+(display "\n")
+(pq-back moja)

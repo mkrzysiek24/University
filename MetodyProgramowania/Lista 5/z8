@@ -1,0 +1,40 @@
+#lang plait
+
+( define-type Prop
+   ( var [ v : String ])
+   ( conj [ l : Prop ] [r : Prop ])
+   ( disj [ l : Prop ] [r : Prop ])
+   ( neg [ f : Prop ]) )
+
+(define (my-append xs ys)
+  (foldr cons ys xs))
+
+(define dict (hash (list (pair "p" #t) (pair "q" #f) (pair "r" #f))))
+
+(define my-prop
+  (conj (var "p") (disj (var "q") (neg (var "r")))))
+
+(define (rm lst)
+  (cond
+    [(empty? lst) empty]
+    [(member (first lst) (rest lst)) (rm (rest lst))]
+    [else (cons (first lst) (rm (rest lst)))]))
+
+(define (free-vars prop)
+  (rm (cond
+    ((var? prop) (list (var-v prop)))
+    ((neg? prop) (free-vars (neg-f prop)))
+    ((conj? prop) (my-append (free-vars (conj-l prop)) (free-vars (conj-r prop))))
+    ((disj? prop) (my-append (free-vars (disj-l prop)) (free-vars (disj-r prop)))))))
+
+(define (eval dict prop)
+  (cond
+    [(var? prop) (if (some? (hash-ref dict (var-v prop)))
+             (some-v (hash-ref dict (var-v prop)))
+             (error 'dict "Error"))]
+    [(conj? prop) (and (eval dict (conj-l prop)) (eval dict (conj-r prop)))]
+    [(disj? prop) (or (eval dict (disj-l prop)) (eval dict (disj-r prop)))]
+    [(neg? prop) (not (eval dict (neg-f prop)))]))
+
+(eval dict my-prop)
+

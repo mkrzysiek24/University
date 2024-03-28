@@ -1,0 +1,51 @@
+#lang racket
+
+(define-struct leaf () #:transparent)
+(define-struct node (l elem r) #:transparent)
+
+(define (tree? x)
+  (cond [(leaf? x) #t]
+        [(node? x) (and (tree? (node-l x))
+                        (tree? (node-r x)))]
+        [else #f]))
+
+(define (tree-node l elem r)
+  (if (and (tree? l) (tree? r) (number? elem))
+      (node l elem r)
+      (error "nieprawidłowe pola węzła")))
+
+
+(define t
+   (node
+     (node ( leaf ) 2 ( leaf ))
+     5
+     (node ( node ( leaf ) 6 ( leaf ))
+            7
+            ( node ( node ( leaf ) 8 ( leaf )) 9 ( node ( leaf ) 12 ( leaf ))))))
+
+(define (f_min t)
+  (if (leaf? t)
+      #f
+      (if (leaf? (node-l t))
+          (node-elem t)
+          (f_min (node-l t)))))
+
+(define (delete t val)
+  (cond
+    ((leaf? t) #f)
+    ((< val (node-elem t)) (tree-node (delete (node-l t) val) (node-elem t) (node-r t)))
+    ((> val (node-elem t)) (tree-node (node-l t) (node-elem t) (delete (node-r t) val)))
+    (else
+     (cond
+       ((leaf? (node-l t)) (node-r t))
+       ((leaf? (node-r t)) (node-l t))
+       (else (let ((min (f_min (node-r t)))) (tree-node (node-l t) min (delete (node-r t) min))))))))
+
+(delete t 7)
+(node
+ (node (leaf) 2 (leaf))
+ 5
+ (node
+  (node (leaf) 6 (leaf))
+  8
+  (node (leaf) 9 (node (leaf) 12 (leaf)))))

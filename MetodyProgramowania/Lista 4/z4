@@ -1,0 +1,55 @@
+#lang racket
+
+(define-struct leaf () #:transparent)
+(define-struct node (l elem r) #:transparent)
+
+(define (tree? x)
+  (cond [(leaf? x) #t]
+        [(node? x) (and (tree? (node-l x))
+                        (tree? (node-r x)))]
+        [else #f]))
+
+
+(define (tree-node l elem r)
+  (if (and (tree? l) (tree? r) (number? elem))
+      (node l elem r)
+      (error "nieprawidłowe pola węzła")))
+
+( define t
+   ( node
+     ( node ( leaf ) 2 ( leaf ))
+     5
+     ( node ( node ( leaf ) 6 ( leaf ))
+            8
+            ( node ( leaf ) 9 ( leaf )))))
+
+(define (fold-tree f x tree)
+  (if (leaf? tree)
+      x
+        (let ((left-result (fold-tree f x (node-l tree)))
+                    (right-result (fold-tree f x (node-r tree))))
+                (f (node-elem tree) left-result right-result))))
+
+
+(define (flatten tree)
+  (fold-tree (lambda (value left right)
+               (append left (cons value right)))
+             '()
+             tree))
+
+( define ( list->left-tree xs )
+   ( foldl ( lambda (x t) ( node t x ( leaf ))) ( leaf ) xs ))
+( define test-tree ( list->left-tree ( build-list 20000 identity )))
+
+(define (flat-append t xs)
+  (if (leaf? t)
+      xs
+      (flat-append (node-l t)
+                   (cons (node-elem t)
+                         (flat-append (node-r t) xs)))))
+
+(define (flatten2 tree)
+  (flat-append tree '()))
+
+(time (flatten test-tree))
+(time (flatten2 test-tree))

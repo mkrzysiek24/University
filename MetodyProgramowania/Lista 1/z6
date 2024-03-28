@@ -1,0 +1,7 @@
+#lang racket
+
+(define x 4)
+
+(or (and (> x 0) 1) 0)
+(define (iff ifCond ifTrue ifFalse)
+  (or (and ifCond ifTrue) ifFalse))

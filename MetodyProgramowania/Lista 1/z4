@@ -1,0 +1,15 @@
+#lang racket
+
+(require rackunit)
+
+(define (sum_2max a b c)
+  (cond [(and (<= a b) (<= a c)) (+ (* b b) (* c c))]
+        [(and (<= b a) (<= b c)) (+ (* a a) (* c c))]
+        [else (+ (* a a) (* b b))]))
+
+(check-equal? (sum_2max 0 0 0) 0)
+(check-equal? (sum_2max 1 2 3) 13)
+(check-equal? (sum_2max 3 3 3) 18)
+(check-equal? (sum_2max -1 -4 -3) 10)
+(check-equal? (sum_2max 3 5 4) 41)
+

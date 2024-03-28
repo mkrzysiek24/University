@@ -1,0 +1,84 @@
+#lang plait
+
+; drzewa
+
+(define-type (Tree 'a)
+  (leaf)
+  (node [l : (Tree 'a)] [elem : 'a] [r : (Tree 'a)]))
+
+(define example-tree
+  (node (node (leaf) 1 (leaf))
+        2
+        (node (leaf)
+              3
+              (node (leaf) 4 (leaf)))))
+
+(define (process-tree node-func leaf-func left-accum-func right-accum-func init-accum tree)
+  (cond ((leaf? tree) (leaf-func init-accum))
+        (else (node-func init-accum
+                         (process-tree node-func leaf-func left-accum-func right-accum-func
+                                       (left-accum-func init-accum (node-elem tree)) (node-l tree))
+                         (node-elem tree)
+                         (process-tree node-func leaf-func left-accum-func right-accum-func
+                                       (right-accum-func init-accum (node-elem tree)) (node-r tree))))))
+
+(define (process-tree2 node-fn leaf-fn left-fn right-fn acc tree)
+  (cond
+    [(leaf? tree) (leaf-fn acc)]
+    [(node? tree)
+     (node-fn (process-tree node-fn leaf-fn left-fn right-fn acc (node-l tree))
+              (node-elem tree)
+              (process-tree node-fn leaf-fn left-fn right-fn acc (node-r tree)))]
+    [else acc]))
+
+
+; drzewa jako słowniki
+
+(define example-dict-tree
+  (node (node (leaf) (pair 1 "foo") (leaf))
+        (pair 2 "bar")
+        (node (leaf)
+              (pair 3 "baz")
+              (node (leaf)
+                    (pair 4 "qux")
+                    (leaf)))))
+
+; wyszukanie wartości w drzewie-słowniku
+; brak wartości oznacza błąd
+
+(define (bst-lookup x t)
+  (cond [(leaf? t) (error 'bst-lookup "Not found")]
+        [(= x (fst (node-elem t)))
+         (snd (node-elem t))]
+        [(< x (fst (node-elem t)))
+         (bst-lookup x (node-l t))]
+        [else
+         (bst-lookup x (node-r t))]))
+
+; rozwiązanie w stylu Racketa - nie sprawdza się!
+; wymusza, aby elementy listy były wartościami logicznymi
+
+(define (bst-lookup-opt-bool x t)
+  (cond [(leaf? t) #f]
+        [(= x (fst (node-elem t)))
+         (snd (node-elem t))]
+        [(< x (fst (node-elem t)))
+         (bst-lookup-opt-bool x (node-l t))]
+        [else
+         (bst-lookup-opt-bool x (node-r t))]))
+
+; zgłaszanie braku wartości przy pomocy Optionof
+; można myśleć, że typ Optionof jest zdefiniowany tak:
+; (define-type (Optionof 'a)
+;    (none)
+;    (some [v : 'a]))
+
+(define (bst-lookup-opt x t)
+  (cond [(leaf? t) (none)]
+        [(= x (fst (node-elem t)))
+         (some (snd (node-elem t)))]
+        [(< x (fst (node-elem t)))
+         (bst-lookup-opt x (node-l t))]
+        [else
+         (bst-lookup-opt x (node-r t))]))
+

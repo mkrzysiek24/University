@@ -1,0 +1,14 @@
+#lang racket
+
+(define l (list 1 1 3 1))
+(define l1 (list 2 1))
+
+(define (sorted? xs)
+  (cond ((< (length xs) 2) #t)
+      ((< (list-ref xs 1) (car xs)) #f)
+      (else (sorted? (cdr xs)))))
+
+
+(sorted? l)
+
+(sorted? l1)

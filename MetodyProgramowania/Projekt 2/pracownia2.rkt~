@@ -1,0 +1,216 @@
+#lang racket
+(require data/heap)
+(provide sim? wire?
+         (contract-out
+          [make-sim        (-> sim?)]
+          [sim-wait!       (-> sim? positive? void?)];
+          [sim-time        (-> sim? real?)]
+          [sim-add-action! (-> sim? positive? (-> any/c) void?)]
+
+          [make-wire       (-> sim? wire?)]
+          [wire-on-change! (-> wire? (-> any/c) void?)]
+          [wire-value      (-> wire? boolean?)]
+          [wire-set!       (-> wire? boolean? void?)];
+
+          [bus-value (-> (listof wire?) natural?)]
+          [bus-set!  (-> (listof wire?) natural? void?)]
+
+          [gate-not  (-> wire? wire? void?)]
+          [gate-and  (-> wire? wire? wire? void?)]
+          [gate-nand (-> wire? wire? wire? void?)]
+          [gate-or   (-> wire? wire? wire? void?)]
+          [gate-nor  (-> wire? wire? wire? void?)]
+          [gate-xor  (-> wire? wire? wire? void?)]
+
+          [wire-not  (-> wire? wire?)]
+          [wire-and  (-> wire? wire? wire?)]
+          [wire-nand (-> wire? wire? wire?)]
+          [wire-or   (-> wire? wire? wire?)]
+          [wire-nor  (-> wire? wire? wire?)]
+          [wire-xor  (-> wire? wire? wire?)]
+
+          [flip-flop (-> wire? wire? wire? void?)]))
+
+(struct sim (time_sim actions)#:mutable)
+
+(struct wire (simulation value_wire actions)#:mutable)
+
+
+
+;[make-sim        (-> sim?)]
+(define (make-sim)
+  (sim 0 (make-heap (lambda (action1 action2) (< (cdr action1) (cdr action2))))))
+              
+;[sim-wait!       (-> sim? positive? void?)]
+(define (sim-wait! simulation time)
+  (define end (+ (sim-time simulation) time))
+  (define (next)
+    (let ([actions (sim-actions simulation)])
+      (when (> (heap-count actions) 0)
+        (let ([action (heap-min actions)])            
+          (when (<= (cdr action) end)
+            (begin (heap-remove-min! actions)
+                   (set-sim-time_sim! simulation (cdr action))
+                   ((car action))
+                   (next)))))))
+  (begin (next) (set-sim-time_sim! simulation end)))
+
+;[sim-time        (-> sim? real?)]
+(define (sim-time simulation)
+  (sim-time_sim simulation))
+
+;[sim-add-action! (-> sim? positive? (-> any/c) void?)]
+(define (sim-add-action! simulation time action)
+  (heap-add! (sim-actions simulation) (cons action (+ (sim-time simulation) time))))
+
+;[make-wire       (-> sim? wire?)]
+(define (make-wire simulation)
+  (wire simulation #f '()))
+
+;[wire-on-change! (-> wire? (-> any/c) void?)]
+(define (wire-on-change! wire action)
+  (set-wire-actions! wire (cons action (wire-actions wire)))
+  action)
+  
+;[wire-value      (-> wire? boolean?)]
+(define (wire-value wire)
+  (wire-value_wire wire))
+
+;[wire-set!       (-> wire? boolean? void?)]
+(define (wire-set! wire bool)
+  (define (aa actions)
+    (if (null? actions)
+        (void)
+        (begin (aa (cdr actions)) (car actions))))
+  (if (equal? (wire-value wire) bool)
+      (void)
+      (begin (set-wire-value_wire! wire bool) (aa (wire-actions wire)))))
+  
+;skrót
+(define (saa simulation time function)
+  (sim-add-action! simulation time function))
+
+;[gate-not  (-> wire? wire? void?)]
+(define (gate-not output input)
+  (wire-on-change! input (saa (wire-simulation input) 1 (lambda ( ) (wire-set! output (not (wire-value_wire input)))))))
+
+;[gate-and  (-> wire? wire? wire? void?)]
+(define (gate-and output input-a input-b)
+  (wire-on-change! input-a (saa (wire-simulation input-a) 1 (lambda () (wire-set! output (and (wire-value_wire input-a) (wire-value_wire input-b))))))
+  (wire-on-change! input-b (saa (wire-simulation input-b) 1 (lambda () (wire-set! output (and (wire-value_wire input-a) (wire-value_wire input-b)))))))
+
+;[gate-nand (-> wire? wire? wire? void?)]
+(define (gate-nand output input-a input-b)
+  (wire-on-change! input-a (saa (wire-simulation input-a) 1 (lambda () (wire-set! output (not (and (wire-value_wire input-a) (wire-value_wire input-b)))))))
+  (wire-on-change! input-b (saa (wire-simulation input-b) 1 (lambda () (wire-set! output (not (and (wire-value_wire input-a) (wire-value_wire input-b))))))))
+
+;[gate-or   (-> wire? wire? wire? void?)]
+(define (gate-or output input-a input-b)
+  (wire-on-change! input-a (saa (wire-simulation input-a) 1 (lambda () (wire-set! output (or (wire-value_wire input-a) (wire-value_wire input-b))))))
+  (wire-on-change! input-b (saa (wire-simulation input-b) 1 (lambda () (wire-set! output (or (wire-value_wire input-a) (wire-value_wire input-b)))))))
+
+;[gate-nor  (-> wire? wire? wire? void?)]
+(define (gate-nor output input-a input-b)
+  (wire-on-change! input-a (saa (wire-simulation input-a) 1 (lambda () (wire-set! output (not (or (wire-value_wire input-a) (wire-value_wire input-b)))))))
+  (wire-on-change! input-b (saa (wire-simulation input-b) 1 (lambda () (wire-set! output (not (or (wire-value_wire input-a) (wire-value_wire input-b))))))))
+
+;[gate-xor  (-> wire? wire? wire? void?)]
+(define (gate-xor output input-a input-b)
+  (wire-on-change! input-a (saa (wire-simulation input-a) 2 (lambda () (wire-set! output (if (equal? (wire-value_wire input-a) (wire-value_wire input-b)) #f #t)))))
+  (wire-on-change! input-b (saa (wire-simulation input-b) 2 (lambda () (wire-set! output (if (equal? (wire-value_wire input-a) (wire-value_wire input-b)) #f #t))))))
+
+;[wire-not  (-> wire? wire?)]
+(define (wire-not input)
+  (define output
+    (make-wire (wire-simulation input)))
+  (gate-not output input)
+  output)
+
+;[wire-and  (-> wire? wire? wire?)]
+(define (wire-and input-a input-b)
+  (define output
+    (make-wire (wire-simulation input-a)))
+  (gate-and output input-a input-b)
+  output)
+
+;[wire-nand (-> wire? wire? wire?)]
+(define (wire-nand input-a input-b)
+  (define output
+    (make-wire (wire-simulation input-a)))
+  (gate-nand output input-a input-b)
+  output)
+
+;[wire-or   (-> wire? wire? wire?)]
+(define (wire-or input-a input-b)
+  (define output
+    (make-wire (wire-simulation input-a)))
+  (gate-or output input-a input-b)
+  output)
+
+;[wire-nor  (-> wire? wire? wire?)]
+(define (wire-nor input-a input-b)
+  (define output
+    (make-wire (wire-simulation input-a)))
+  (gate-nor output input-a input-b)
+  output)
+
+;[wire-xor  (-> wire? wire? wire?)]
+(define (wire-xor input-a input-b)
+  (define output
+    (make-wire (wire-simulation input-a)))
+  (gate-xor output input-a input-b)
+  output)
+    
+ 
+
+
+
+
+
+
+
+
+
+(define (bus-set! wires value)
+  (match wires
+    ['() (void)]
+    [(cons w wires)
+     (begin
+       (wire-set! w (= (modulo value 2) 1))
+       (bus-set! wires (quotient value 2)))]))
+
+(define (bus-value ws)
+  (foldr (lambda (w value) (+ (if (wire-value w) 1 0) (* 2 value)))
+         0
+         ws))
+
+(define (flip-flop out clk data)
+  (define sim (wire-simulation data)) ;zmieniłam wire-sim na wire-simulation 
+  (define w1  (make-wire sim))
+  (define w2  (make-wire sim))
+  (define w3  (wire-nand (wire-and w1 clk) w2))
+  (gate-nand w1 clk (wire-nand w2 w1))
+  (gate-nand w2 w3 data)
+  (gate-nand out w1 (wire-nand out w3)))
+
+(require rackunit)
+
+(define simm (make-sim))
+
+(define (mux a b s)
+  (wire-or (wire-and a s) (wire-and b (wire-not s) )))
+
+(define a (make-wire simm))
+(define b (make-wire simm))
+(define s (make-wire simm))
+(define mux1 (mux a b s))
+
+(wire-set! a #f)
+(wire-set! b #f)
+(wire-set! s #f)
+(sim-wait! simm 20)
+(check-equal? (wire-value mux1)
+(wire-value b))
+
+
+

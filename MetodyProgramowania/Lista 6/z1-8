@@ -1,0 +1,111 @@
+#lang plait
+
+( define-type ( NNF 'v)
+   ( nnf-lit [ polarity : Boolean ] [ var : 'v ])
+   ( nnf-conj [l : ( NNF 'v)] [r : ( NNF 'v) ])
+   ( nnf-disj [l : ( NNF 'v)] [r : ( NNF 'v) ]))
+
+(define f1
+  (nnf-conj (nnf-lit #f "x") (nnf-lit #t "y")))
+
+(define dict (hash (list (pair "x" #t) (pair "y" #f) (pair "r" #f))))
+
+(define (neg-nnf formula)
+  (cond
+    [(nnf-lit? formula) (if (equal? (nnf-lit-polarity formula) #t)
+                      (nnf-lit #f (nnf-lit-var formula))
+                      (nnf-lit #t (nnf-lit-var formula)))]
+    [(nnf-conj? formula) (nnf-disj (neg-nnf (nnf-conj-l formula))
+                                   (neg-nnf (nnf-conj-r formula)))]
+    [(nnf-disj? formula) (nnf-conj (neg-nnf (nnf-disj-l formula))
+                                   (neg-nnf (nnf-disj-r formula)))]))
+
+(define (ff var)
+  (some-v (hash-ref dict var)))
+
+
+(define (eval-nnf s formula)
+  (cond
+    [(nnf-lit? formula)
+     (if (equal? (nnf-lit-polarity formula) #t) 
+         (s (nnf-lit-var formula))
+         (not (s (nnf-lit-var formula))))]
+    [(nnf-conj? formula) (and (eval-nnf s (nnf-conj-l formula))
+                         (eval-nnf s (nnf-conj-r formula)))]
+    [(nnf-disj? formula) (or (eval-nnf s (nnf-disj-l formula))
+                        (eval-nnf s (nnf-disj-r formula)))]))
+
+
+(neg-nnf f1)
+
+
+
+( define-type ( Formula 'v)
+   ( var [ var : 'v ])
+   ( neg [ f : ( Formula 'v) ])
+   ( conj [ l : ( Formula 'v)] [r : ( Formula 'v) ])
+   ( disj [ l : ( Formula 'v)] [r : ( Formula 'v) ]) )
+
+(define (to-nnf2 fi)
+  (cond
+    [(var? fi) fi]
+    [(neg? fi) (cond
+                 [(var? (neg-f fi)) fi]
+                 [(neg? (neg-f fi)) (to-nnf2 (neg-f (neg-f fi)))]
+                 [(conj? (neg-f fi)) (disj (to-nnf2 (neg (conj-l (neg-f fi)))) (to-nnf2 (neg (conj-r (neg-f fi)))))]
+                 [(disj? (neg-f fi)) (conj (to-nnf2 (neg (disj-l (neg-f fi)))) (to-nnf2 (neg (disj-r (neg-f fi)))))])]
+    [(conj? fi) (conj (to-nnf2 (conj-l fi)) (to-nnf2 (conj-r fi)))]
+    [(disj? fi) (disj (to-nnf2 (conj-l fi)) (to-nnf2 (conj-r fi)))]))
+
+(define (to-nnf formula)
+  (cond
+    [(var? formula) (nnf-lit #t (var-var formula))]
+    [(conj? formula) (nnf-conj (to-nnf (conj-l formula))
+                               (to-nnf (conj-r formula)))]
+    [(disj? formula) (nnf-disj (to-nnf (disj-l formula))
+                               (to-nnf (disj-r formula)))]
+    [(neg? formula)
+     (cond
+       [(var? (neg-f formula))
+        (nnf-lit #f (var-var (neg-f formula)))]
+       [(neg? (neg-f formula))
+        (to-nnf (neg-f (neg-f formula)))]
+       [(conj? (neg-f formula))
+        (nnf-disj (to-nnf (neg (conj-l (neg-f formula))))
+                  (to-nnf (neg (conj-r (neg-f formula)))))]
+       [(disj? (neg-f formula))
+        (nnf-conj (to-nnf (neg (disj-l (neg-f formula))))
+                  (to-nnf (neg (disj-r (neg-f formula)))))])]))
+
+;Zadanie 7
+
+
+(define (eval-formula s fi)
+  (cond
+    [(var? fi) (s fi)]
+    [(neg? fi) (not (eval-formula s (neg-f fi)))]
+    [(conj? fi) (and (eval-formula s (conj-l fi)) (eval-formula s (conj-r fi)))]
+    [(disj? fi) (or (eval-formula s (disj-l fi)) (eval-formula s (disj-r fi)))]))
+
+
+;Zadanie 8
+
+(define (sorted? xs)
+  (cond [(empty? xs) #t] 
+        [(empty? (rest xs)) #t]
+        [(and (<= (first xs) (second xs)) (sorted? (rest xs))) #t]
+        [else #f]))
+
+(define (insert x xs)
+  (if (empty? xs)
+      (list x)
+      (if (<= x (first xs))
+          (cons x xs)
+          (cons (first xs) (insert x (rest xs))))))
+
+(define k (list 5 4 6 8 10))
+
+(sorted? k)
+
+(insert 9 k)
+

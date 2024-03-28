@@ -1,0 +1,100 @@
+#lang plait
+
+(module+ test
+  (print-only-errors #t))
+
+;; abstract syntax -------------------------------
+
+(define-type Op
+  (add)
+  (sub)
+  (mul)
+  (div))
+
+(define-type Exp
+  (numE [n : Number])
+  (opE [op : Op] [l : Exp] [r : Exp]))
+
+(define (parse [s : S-Exp]) : Exp
+  (cond
+    [(s-exp-match? `NUMBER s)
+     (numE (s-exp->number s))]
+    [(s-exp-match? `{SYMBOL ANY ANY} s)
+     (opE (parse-op (s-exp->symbol (first (s-exp->list s))))
+          (parse (second (s-exp->list s)))
+          (parse (third (s-exp->list s))))]
+    [(s-exp-match? `{+} s)
+        (numE 0)
+    ]
+    [(s-exp-match? `{-} s) ; przypadek gdy na liscie pozostal sam symbol odejmowawania
+        (error 'parse "invalid input")
+    ]
+    [(s-exp-match? `{*} s)
+        (numE 1)
+    ]
+    [(s-exp-match? `{/} s)
+        (error 'parse "invalid input")
+    ]
+    [(s-exp-match? `{- ANY ...} s)
+     (opE (parse-op (s-exp->symbol (first (s-exp->list s))))
+          (parse (second (s-exp->list s)))
+          (parse (list->s-exp (cons `+ (rest (rest (s-exp->list s))))))
+          )]
+    [(s-exp-match? `{/ ANY ...} s)
+     (opE (parse-op (s-exp->symbol (first (s-exp->list s))))
+          (parse (second (s-exp->list s)))
+          (parse (list->s-exp (cons `* (rest (rest (s-exp->list s))))))
+          )]
+    [(s-exp-match? `{SYMBOL ANY ...} s)
+     (opE (parse-op (s-exp->symbol (first (s-exp->list s))))
+          (parse (second (s-exp->list s)))
+          (parse (list->s-exp (cons (first (s-exp->list s)) (rest (rest (s-exp->list s))))))
+          )]
+    [else (error 'parse "invalid input")]))
+
+(define (parse-op [op : Symbol]) : Op
+  (cond
+    [(eq? op '+) (add)]
+    [(eq? op '-) (sub)]
+    [(eq? op '*) (mul)]
+    [(eq? op '/) (div)]
+    [else (error 'parse "unknown operator")]))
+
+;===============================================
+
+(define-type-alias Value Number)
+(define (op->proc [op : Op]) : (Value Value -> Value)
+  (type-case Op op
+    [(add) +]
+    [(sub) -]
+    [(mul) *]
+    [(div) /]))
+
+(define (eval [e : Exp]) : Value
+  (type-case Exp e
+    [(numE n) n]
+    [(opE o l r) ((op->proc o) (eval l) (eval r))]))
+
+(define-type Exp
+  (numE [n : Number])
+  ;tu zmiana na liste exp
+  (opE [op : Op] [args : (Listof Exp)]))
+
+w parserze zmienilam ten fragment  [(s-exp-match? `{SYMBOL ANY ...} s)
+     (opE (parse-op (s-exp->symbol (first (s-exp->list s))))
+          ;tu zmiana na parsowanie calej listy za pomoca mapy
+          (map parse (rest (s-exp->list s))))]
+
+a tak wyglada eval (define (eval [e : Exp]) : Value
+  (type-case Exp e
+    [(numE n) n]
+    [(opE o xs)
+     (if (empty? xs)
+         (if (or (add? o) (sub? o))
+             0
+             1)
+         (foldl (lambda (x y) ((op->proc o) y (eval x)))
+                (eval (first xs))
+                (rest xs)))]))
+
+(eval (parse `{/ 17 2 3 4}))

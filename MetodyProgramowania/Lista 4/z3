@@ -1,0 +1,49 @@
+#lang racket
+
+(define-struct leaf () #:transparent)
+(define-struct node (l elem r) #:transparent)
+
+(define (tree? x)
+  (cond [(leaf? x) #t]
+        [(node? x) (and (tree? (node-l x))
+                        (tree? (node-r x)))]
+        [else #f]))
+
+
+(define (tree-node l elem r)
+  (if (and (tree? l) (tree? r) (number? elem))
+      (node l elem r)
+      (error "nieprawidłowe pola węzła")))
+
+( define t
+   ( node
+     ( node ( leaf ) 2 ( leaf ))
+     5
+     ( node ( node ( leaf ) 6 ( leaf ))
+            8
+            ( node ( leaf ) 9 ( leaf )))))
+
+
+(define (bst? tree)
+  (define (hp tree min-value max-value)
+    (cond ((leaf? tree) #t)
+          ((and (and (>= (node-elem tree) min-value)
+                     (< (node-elem tree) max-value))
+                (and (hp (node-l tree) min-value (node-elem tree))
+                     (hp (node-r tree) (node-elem tree) max-value))) #t)
+          (else #f)))
+  (hp tree -inf.0 +inf.0))
+
+(bst? t)
+
+(define (sum-paths tree)
+  (define (hp tree last-value)
+    (if (leaf? tree)
+        (leaf)
+        (tree-node
+         (hp (node-l tree) (+ (node-elem tree) last-value))
+         (+ (node-elem tree) last-value)
+         (hp (node-r tree) (+ (node-elem tree) last-value)))))
+  (hp tree 0))
+
+(sum-paths t)

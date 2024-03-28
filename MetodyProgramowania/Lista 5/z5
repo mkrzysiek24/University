@@ -1,0 +1,62 @@
+#lang plait
+
+
+(define-type (Tree 'a)
+  (leaf)
+  (node [l : (Tree 'a)] [elem : 'a] [r : (Tree 'a)]))
+
+(define example-tree
+  (node (node (leaf) 1 (leaf))
+        2
+        (node (node (leaf) 3 (leaf))
+              4
+              (node (leaf) 4 (leaf)))))
+
+(define (process-tree node-func leaf-func left-acc-func right-acc-func acc tree)
+    (cond [(leaf? tree) (leaf-func acc)
+          ]
+          [else 
+            (node-func
+                acc
+                (process-tree
+                          node-func
+                          leaf-func
+                          left-acc-func
+                          right-acc-func
+                          (left-acc-func acc (node-elem tree))
+                          (node-l tree))
+                (node-elem tree)
+                (process-tree
+                          node-func
+                          leaf-func
+                          left-acc-func
+                          right-acc-func
+                          (right-acc-func acc (node-elem tree))
+                          (node-r tree))
+            )
+          ]
+    )
+)
+
+(define (bst? tree)
+    (process-tree
+        (lambda (acc l val r) (and (<= (fst acc) val) (> (snd acc) val) l r))
+        (lambda (leaf) #t)
+        (lambda (acc v) (pair (fst acc) v))
+        (lambda (acc v) (pair v (snd acc)))
+        (pair -inf.0 +inf.0)
+        tree
+    )
+)
+
+(define (sum-paths tree)
+    (process-tree
+        (lambda (acc l val r) (node l (+ acc val) r))
+        (lambda (x) (leaf))
+        (lambda (acc elem) (+ acc elem))
+        (lambda (acc elem) (+ acc elem))
+        0
+        tree
+    )
+)
+

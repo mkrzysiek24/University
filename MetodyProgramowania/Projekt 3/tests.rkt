@@ -1,0 +1,246 @@
+#lang plait
+(require "solution.rkt")
+
+; ------------------- TESTS -------------------------
+
+; parsing tests -------------------------------------
+(module+ test
+  (test (parse `{define {} for 5})
+        (defineE empty (numE 5)))
+  (test (parse `{define {[fun f () = 3]} for
+                  {let x be 2 in {f {}}}})
+        (defineE
+          (list (funE 'f empty (numE 3)))
+          (letE 'x (numE 2) (callE 'f empty))))
+  (test (parse `{define {} for {5 - 6}})
+        (defineE empty (opE (sub) (numE 5) (numE 6))))
+  (test (parse `{define
+                  {[fun f (x) = {ifz {x <= 1} then 2 else 3}]}
+                  for {f (x)}})
+        (defineE
+          (list (funE 'f (list 'x)
+                      (ifE (opE (leq) (varE 'x) (numE 1)) (numE 2) (numE 3))))
+          (callE 'f (list (varE 'x)))))
+  (test (parse `{define {} for
+                  {2 + {5 <= 6}}})
+        (defineE empty (opE (add) (numE 2) (opE (leq) (numE 5) (numE 6)))))
+  (test (parse `{define
+                  {[fun + (x y) = {x + y}]}
+                  for
+                  {+ (1 2)}})
+        (defineE (list (funE '+ (list 'x 'y) (opE (add) (varE 'x) (varE 'y))))
+          (callE '+ (list (numE 1) (numE 2))))))
+
+(module+ test
+  (test/exn (parse `5)
+            "parse: wrong structure of a program")
+  (test/exn (parse `{define {[fun f (x) = x]} for})
+            "parse: wrong structure of a program")
+  (test/exn (parse `{define {} for
+                      {2 + {3 - {+ 7 7}}}})
+            "parse: invalid input")
+  (test/exn (parse `{define {[fun f (x y z x) = {x + x}]} for
+                      2})
+            "parse: duplicate function arguments")
+  (test/exn (parse `{define {} for
+                      {2 ^ 2}})
+            "parse: unknown operator")
+  (test/exn (parse `{define {[fun f (x) = x]
+                             [fun g (x) = x]
+                             [fun h (x) = x]
+                             [fun f (y) = y]} for
+                      {f ({g ({h ({f (5)})})})}})
+            "parse: duplicate function names")
+  (test/exn (parse `{define {[fun f x = x]} for 5})
+            "parse: function syntax error")
+  (test/exn (parse `{define {[fun f (x y 5 z h) = x]} for
+                      {f (x)}})
+            "parse: function arguments: expected a symbol")
+  (test/exn (parse `{define {} for
+                      [fun f (x y) = x]})
+            "parse: invalid input")
+  (test/exn (run `{define {} for
+                    {2 + 2 + 2}})
+            "parse: invalid input")
+  (test/exn  (run `{define
+                     {[fun f (x y) = {x + y}]}
+                     for
+                     {5 f 3}})
+             "parse: unknown operator"))
+
+; run & eval tests ----------------------------------
+
+(module+ test
+  (test (run `{define {} for {2 + 2}})
+        4)
+  (test (run `{define {} for
+                {2 - {3 + {7 * {1 <= 0}}}}})
+        -8)
+  (test (run `{define {} for
+                {let x be 7 in
+                  {{let x be 8 in
+                     {let y be 9 in
+                      {x + y}}}
+                   + x}}})
+        24)
+  (test (run `{define
+                {[fun fact (n) = {ifz n then 1 else {n * {fact ({n - 1})}}}]}
+                for
+                {fact (5)}})
+        120)
+  (test (run `{define
+                {[fun even (n) = {ifz n then 0 else {odd ({n - 1})}}]
+                 [fun odd (n) = {ifz n then 42 else {even ({n - 1})}}]}
+                for
+                {even (1024)}})
+        0)
+  (test (run `{define
+                {[fun gcd (m n) = {ifz n
+                                       then m
+                                       else {ifz {m <= n}
+                                                 then {gcd (m {n - m})}
+                                                 else {gcd ({m - n} n)}}}]}
+                for
+                {gcd (81 63)}})
+        9)
+  (test (run `{define
+                {[fun fib (n) = {ifz {n <= 1}
+                                     then n
+                                     else {{fib ({n - 1})} + {fib {(n - 2)}}}}]}
+                for
+                {fib (10)}})
+        55)
+  (test  (run `{define
+                 {[fun f (x y) = {ifz x then y else x}]
+                  [fun g (x) = x]}
+                 for
+                 (let x be 1 in {f (x g)})})
+         1)
+  (test (run `{define
+                {[fun f () = {g (3)}]
+                 [fun g (x) = x]}
+                for
+                {f ()}})
+        3)
+  (test (run `{define
+                {[fun f () = {g (3 3)}]
+                 [fun g (x) = x]}
+                for
+                {g (3)}})
+        3)
+  (test (run `{define {}
+                for
+                {ifz 0 then 3 else {f (x)}}})
+        3)
+  (test (run `{define
+                {[fun + (x y) = 3]
+                 [fun - (x y) = 7]}
+                for
+                {1 + {+ (2 2)}}})
+        4)
+  (test (run `{define
+                {[fun f (x) = {x + 1}]}
+                for
+                (let x be 1 in
+                  {let y be x in
+                    {let x be {f (x)} in
+                      y}})})
+        1)
+  (test (run `{define {[fun + () = 3]}
+                for
+                {{+ ()} + {+ ()}}})
+        6)
+  (test (run `{define {[fun + () = 3]}
+                for
+                {let + be 1 in
+                  {+ + +}}})
+        2))
+#|
+
+(module+ test
+  (test/exn (run `{define {} for
+                    {let x be y in 1}})
+            "lookup-env: undefined object")
+  (test/exn (run `{define {} for
+                    {f (5)}})
+            "lookup-env: undefined object")
+  (test/exn (run `{define
+                    {[fun f (x y) = {x + y}]}
+                    for
+                    {f (5)}})
+            "eval: apply: wrong number of arguments")
+  (test/exn (run `{define
+                    {[fun f (x y z) = 3]}
+                    for
+                    {f (1 2 3 4)}})
+            "eval: apply: wrong number of arguments")
+  (test/exn (run `{define
+                    {[fun f (x y) = {ifz x then y else x}]
+                     [fun g (x) = x]}
+                    for
+                    (let x be 1 in {x (5)})})
+            "eval: apply: expected a function")
+  (test/exn (run `{define
+                    {[fun f (x y) = {ifz x then y else x}]
+                     [fun g (x) = x]}
+                    for
+                    (let x be 1 in {f (g x)})})
+            "eval: expected a number")
+  (test/exn (run `{define
+                    {[fun f (x y) = {x + y}]
+                     [fun g (z) = {x + z}]}
+                    for
+                    {g (5)}})
+            "lookup-env: undefined object")
+  (test/exn (run `{define {[fun f (x) = x]} for
+                    f})
+            "run: expected a number")
+  (test/exn (run `{define {} for {+ (2 3 4)}})
+            "lookup-env: undefined object")
+  (test/exn (run `{define {[fun g (x) = {x + 1}]
+                           [fun h (x) = {x - 1}]}
+                    for
+                    {3 + g}})
+            "eval: expected a number")
+  (test/exn (run `{define {[fun g (x) = {x + 1}]
+                           [fun h (x) = {x - 1}]}
+                    for
+                    {g + 3}})
+            "eval: expected a number")
+  (test/exn (run `{define {[fun g (x) = {x + 1}]
+                           [fun h (x) = {x - 1}]}
+                    for
+                    {3 <= g}})
+            "eval: expected a number")
+  (test/exn (run `{define {[fun g (x) = {x + 1}]
+                           [fun h (x) = {x - 1}]}
+                    for
+                    {g <= 3}})
+            "eval: expected a number")
+  (test/exn (run `{define {[fun + () = 3]}
+                    for
+                    {let + be 1 in
+                      {+ + {+ ()}}}})
+            "eval: apply: expected a function")
+  (test/exn (run `{define {[fun f (x) = {x + y}]}
+                    for
+                    {let y be 1 in
+                      {f (3)}}})
+            "lookup-env: undefined object")
+  (test/exn (run `{define {[fun f (x) = {g (x)}]}
+                    for
+                    {let y be 1 in
+                      {f (3)}}})
+            "lookup-env: undefined object")
+  (test/exn (run `{define {[fun f (x) = {x + y}]
+                           [fun g (y) = {5 + y}]}
+                    for
+                    {f ({g (6)})}})
+            "lookup-env: undefined object")
+  (test/exn (run `{define {[fun f (x) = {x + y}]
+                           [fun g (y) = {5 + y}]}
+                    for
+                    {g ({f (6)})}})
+            "lookup-env: undefined object"))
+
+|#            

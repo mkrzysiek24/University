@@ -1,0 +1,29 @@
+#lang plait
+
+(define (perms xs)
+  (cond
+    ((empty? xs) '(()))
+    ((empty? (rest xs)) (list xs))
+    (else (flatten (map (lambda (x)
+                          (map (lambda (p) (cons x p))
+                               (perms (remove x xs))))
+                        xs)))))
+
+(define (remove x xs)
+  (cond
+    [(empty? xs) empty]
+    [(equal? x (first xs)) (rest xs)]
+    [else (cons (first xs) (remove x (rest xs)))]))
+
+(define (my-append xs ys)
+  (foldr cons ys xs))
+
+(define (flatten xs)
+  (foldr my-append '() xs))
+(define xs '(1 2))
+
+(perms '(1 2))
+(flatten '(((1 2 2 3) (1 2 3 2) (1 3 2 2))
+  ((2 1 2 3) (2 1 3 2) (2 2 1 3) (2 2 3 1) (2 3 1 2) (2 3 2 1))
+  ((2 1 2 3) (2 1 3 2) (2 2 1 3) (2 2 3 1) (2 3 1 2) (2 3 2 1))
+  ((3 1 2 2) (3 2 1 2) (3 2 2 1))))

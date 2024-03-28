@@ -1,0 +1,77 @@
+#lang plait
+
+(define-type Op-bi
+  (op-add) (op-mul) (op-sub) (op-div) (op-pow))
+
+(define-type Op-un
+  (op-fact) (op-posit))
+
+(define-type Exp
+  (exp-number [n : Number])
+  (exp-op [op : Op-bi] [e1 : Exp] [e2 : Exp])
+  (exp-un [op : Op-un] [e : Exp]))
+
+(define (parse-Op-bi s)
+  (let ([sym (s-exp->symbol s)])
+  (cond
+    [(equal? sym '+) (op-add)]
+    [(equal? sym '-) (op-sub)]
+    [(equal? sym '*) (op-mul)]
+    [(equal? sym '/) (op-div)]
+    [(equal? sym '^) (op-pow)])))
+
+  (define (parse-Op-un s)
+  (let ([sym (s-exp->symbol s)])
+  (cond
+    [(equal? sym '!) (op-fact)]
+    [(equal? sym 'oppo) (op-posit)])))
+
+(define (parse-Exp s)
+  (cond
+    [(s-exp-number? s) (exp-number (s-exp->number s))]
+    [(s-exp-list? s)
+     (let ([xs (s-exp->list s)])
+        (if (or (equal? (s-exp->symbol (first xs)) 'oppo) (equal? (s-exp->symbol (first xs)) '!))
+            (exp-un (parse-Op-un  (first  xs)) (parse-Exp (second xs)))
+            (exp-op (parse-Op-bi  (first  xs))
+                    (parse-Exp (second xs))
+                    (parse-Exp (third  xs)))))]))
+
+; ==============================================
+
+(define (! n)
+    (if (= n 0) 1 (* n (! (- n 1)))))
+
+
+(define (pow a n)
+  (local [(define (pow-helper num p)
+            (if (= p 0)
+                1
+                (* num (pow-helper num (- p 1)))))]
+    (if (< n 0)
+        (/ 1 (pow-helper a (* -1 n)))
+        (pow-helper a n))))
+
+
+(define (eval-op-bi op)
+  (type-case Op-bi op
+    [(op-add) +]
+    [(op-sub) -]
+    [(op-mul) *]
+    [(op-div) /]
+    [(op-pow) pow]))
+
+(define (eval-op-un op)
+  (type-case Op-un op
+    [(op-fact) !]
+    [(op-posit) (lambda (x) (* -1 x))]))
+
+(define (eval e)
+  (type-case Exp e
+    [(exp-number n)    n]
+    [(exp-op op e1 e2)
+     ((eval-op-bi op) (eval e1) (eval e2))]
+    [(exp-un op e)
+        ((eval-op-un op) (eval e))]))
+
+(eval (parse-Exp `(^ (+ 1 2) -2)))

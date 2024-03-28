@@ -1,0 +1,26 @@
+#lang racket
+
+(define (empty-set) (lambda (x) #f))
+
+((empty-set) null)
+
+(define (union s t)
+  (lambda (x) (or (s x) (t x))))
+
+(define (singleton a) (lambda (x) (equal? x a)))
+
+(define (in a s) (s a))
+
+(define (intersect s t)
+  (lambda (x) (and (s x) (t x))))
+
+
+(define set1 (singleton 5))
+(define set2 (union set1 (singleton 6)))
+(define set3 (union (singleton 5) (singleton 3)))
+(define set4 (intersect set2 set3))
+(in 3 set4)
+(in 4 set4)
+(in 5 set4)
+(in 6 set4)
+(in 7 set4)
